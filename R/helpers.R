@@ -265,7 +265,7 @@ setupEnv <- function(dir=getwd(), init=FALSE) {
     dir.create(venv_dir, recursive=TRUE)
   }
 
-  options(jetpack_venv=venv_dir)
+  options(renv.verbose=FALSE, jetpack_venv=venv_dir)
 
   # initialize packrat
   if (!packified()) {
