@@ -205,7 +205,7 @@ noPackrat <- function() {
 }
 
 packified <- function() {
-  file.exists(file.path(packrat::project_dir(), "packrat"))
+  file.exists(file.path(getOption("jetpack_venv"), "renv"))
 }
 
 pkgVersion <- function(status, name) {
@@ -355,11 +355,15 @@ venvDir <- function(dir) {
   file.path(venv_dir, venv_name)
 }
 
+quietly <- function(code) {
+  utils::capture.output(suppressMessages(code))
+}
+
 setupEnv <- function(dir=getwd(), init=FALSE) {
   ensureRepos()
 
   venv_dir <- venvDir(dir)
-  if (init && file.exists(venv_dir) && !file.exists("packrat.lock")) {
+  if (init && file.exists(venv_dir) && !file.exists("renv.lock")) {
     # remove previous virtual env
     unlink(venv_dir, recursive=TRUE)
   }
@@ -367,20 +371,20 @@ setupEnv <- function(dir=getwd(), init=FALSE) {
     dir.create(venv_dir, recursive=TRUE)
   }
 
-  options(packrat.project.dir=venv_dir)
+  options(jetpack_venv=venv_dir)
 
   # initialize packrat
   if (!packified()) {
     message("Creating virtual environment...")
 
-    # don't include jetpack in external.packages
-    # since packrat will require it to be installed
-    utils::capture.output(suppressMessages(packrat::init(venv_dir, options=list(print.banner.on.startup=FALSE, use.cache=!isWindows()), enter=FALSE, infer.dependencies=FALSE)))
-    packrat::set_lockfile_metadata(repos=list(CRAN="https://cloud.r-project.org/"))
+    file.copy(file.path(dir, "DESCRIPTION"), file.path(venv_dir, "DESCRIPTION"), overwrite=TRUE)
+    # TODO find way to suppress output from init
+    quietly(renv::init(project=venv_dir, bare=TRUE, restart=FALSE, settings=list(snapshot.type = "explicit")))
+    quietly(renv::snapshot())
   }
 
-  if (!file.exists("packrat.lock")) {
-    file.copy(file.path(packrat::project_dir(), "packrat", "packrat.lock"), "packrat.lock")
+  if (!file.exists(file.path(dir, "renv.lock"))) {
+    file.copy(file.path(renv::project(), "renv.lock"), file.path(dir, "renv.lock"))
   }
 
   venv_dir
