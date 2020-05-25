@@ -17,7 +17,12 @@ load <- function() {
   wd <- getwd()
   tryCatch({
     setwd(venv_dir)
-    utils::capture.output(suppressMessages(source("packrat/init.R")))
+
+    # TODO remove these
+    library(desc)
+    library(docopt)
+
+    quietly(source("renv/activate.R"))
   }, finally={
     setwd(wd)
   })

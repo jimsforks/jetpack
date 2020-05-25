@@ -14,8 +14,7 @@ isTesting <- function() {
 }
 
 enablePackrat <- function() {
-  clean <- !isTesting()
-  suppressMessages(packrat::on(print.banner=FALSE, clean.search.path=clean))
+  quietly(renv::activate(renvProject()))
 }
 
 findDir <- function(path) {
@@ -28,14 +27,8 @@ findDir <- function(path) {
   }
 }
 
-# duplicate logic from
-# packrat:::getDefaultLibPaths()
-getDefaultLibPaths <- function() {
-  strsplit(Sys.getenv("R_PACKRAT_DEFAULT_LIBPATHS", unset=""), .Platform$path.sep, fixed=TRUE)[[1]]
-}
-
 getDesc <- function() {
-  desc::desc(file=packrat::project_dir())
+  desc::desc(file=renvProject())
 }
 
 getName <- function(package) {
@@ -64,128 +57,26 @@ installHelper <- function(remove=c(), desc=NULL, show_status=FALSE, update_all=F
     desc <- getDesc()
   }
 
-  # configure local repos
-  remotes <- desc$get_remotes()
-  local_repos <- c()
-  bioc <- FALSE
-  for (remote in remotes) {
-    if (startsWith(remote, "local::")) {
-      repo <- dirname(substring(remote, 8))
-      local_repos <- c(local_repos, repo)
-    } else if (startsWith(remote, "bioc::")) {
-      bioc <- TRUE
-    }
-  }
-  packrat::set_opts(local.repos=local_repos, persist=FALSE)
-
-  repos <- getOption("repos")
-  if (bioc && is.na(repos["BioCsoft"])) {
-    # not ideal, will hopefully be fixed with
-    # https://github.com/rstudio/packrat/issues/507
-    bioc_repos <- c(
-      BioCsoft="https://bioconductor.org/packages/3.7/bioc",
-      BioCann="https://bioconductor.org/packages/3.7/data/annotation",
-      BioCexp="https://bioconductor.org/packages/3.7/data/experiment",
-      BioCworkflows="https://bioconductor.org/packages/3.7/workflows"
-    )
-
-    # TODO need to set options(repos=...) as well for the snapshot to work
-    packrat::set_lockfile_metadata(repos=c(repos, bioc_repos))
-  }
-
   # use a temporary directly
   # this way, we don't update DESCRIPTION
   # until we know it was successful
-  dir <- packrat::project_dir()
+  dir <- renvProject()
   temp_desc <- file.path(dir, "DESCRIPTION")
   desc$write(temp_desc)
   # strip trailing whitespace
   lines <- trimws(readLines(temp_desc), "r")
   writeLines(lines, temp_desc)
 
-  # get status
-  status <- getStatus(project=dir)
-  missing <- status[is.na(status$library.version), ]
-  restore <- missing[!is.na(missing$packrat.version), ]
-  need <- missing[is.na(missing$packrat.version), ]
-  missing_packrat <- status[is.na(status$packrat.version), ]
-  mismatch <- status[!is.na(status$library.version) & !is.na(status$packrat.version) & status$packrat.version != status$library.version, ]
-
-  # remove mismatch
-  for (name in mismatch$package) {
-    pkgRemove(name)
-  }
-
-  status_updated <- FALSE
-
-  if (nrow(restore) > 0 || nrow(mismatch) > 0) {
-    suppressWarnings(packrat::restore(project=dir, prompt=FALSE))
-
-    # non-vendor approach
-    # for (i in 1:nrow(restore)) {
-    #   row <- restore[i, ]
-    #   devtools::install_version(row$package, version=row$version, dependencies=FALSE)
-    # }
-  }
-
-  if (length(remove) > 0) {
-    for (name in remove) {
-      pkgRemove(name)
-    }
-  }
-
-  # see if any version mismatches
-  # TODO expand to all version specifications
-  deps <- desc$get_deps()
-  specificDeps <- deps[startsWith(deps$version, "== "), ]
-  if (nrow(specificDeps) > 0) {
-    specificDeps$version <- sub("== ", "", specificDeps$version)
-    specificDeps <- merge(specificDeps, status, by="package")
-    mismatch <- specificDeps[is.na(specificDeps$packrat.version) | specificDeps$version != specificDeps$packrat.version, ]
-    if (nrow(mismatch) > 0) {
-      for (i in 1:nrow(mismatch)) {
-        row <- mismatch[i, ]
-        remotes::install_version(row$package, version=row$version, reload=FALSE)
-      }
-    }
-    status_updated <- TRUE
-  }
-
-  # in case we're missing any deps
-  # unfortunately, install_deps doesn't check version requirements
-  # https://github.com/r-lib/devtools/issues/1314
-  if (nrow(need) > 0 || length(remove) > 0 || update_all) {
-    remotes::install_deps(dir, upgrade=update_all, reload=FALSE)
-    status_updated <- TRUE
-  }
-
-  if (status_updated || any(!status$currently.used)) {
-    suppressMessages(packrat::clean(project=dir))
-    status_updated <- TRUE
-  }
-
-  if (status_updated || length(missing_packrat) > 0) {
-    # Bioconductor packages fail to download source
-    suppressMessages(packrat::snapshot(project=dir, prompt=FALSE, ignore.stale=TRUE, snapshot.sources=FALSE))
-
-    # loaded packages like curl can be missing on Windows
-    # so see if we need to restore again
-    status <- getStatus(project=dir)
-    if (any(is.na(status$library.version))) {
-      suppressWarnings(packrat::restore(project=dir, prompt=FALSE))
-    }
-  }
+  renv::install(project=renvProject())
+  renv::snapshot(project=renvProject())
 
   # copy back after successful
   jetpack_dir <- getOption("jetpack_dir")
-  file.copy(file.path(packrat::project_dir(), "DESCRIPTION"), file.path(jetpack_dir, "DESCRIPTION"), overwrite=TRUE)
-  file.copy(file.path(packrat::project_dir(), "packrat", "packrat.lock"), file.path(jetpack_dir, "packrat.lock"), overwrite=TRUE)
+  file.copy(file.path(renvProject(), "DESCRIPTION"), file.path(jetpack_dir, "DESCRIPTION"), overwrite=TRUE)
+  file.copy(file.path(renvProject(), "renv.lock"), file.path(jetpack_dir, "renv.lock"), overwrite=TRUE)
 
   if (show_status) {
-    if (status_updated) {
-      status <- getStatus()
-    }
-
+    status <- renv::status(project=renvProject())
     showStatus(status)
   }
 }
@@ -200,12 +91,16 @@ oneLine <- function(x) {
 
 noPackrat <- function() {
   if (packratOn()) {
-    packrat::off()
+    renv::deactivate(renvProject())
   }
 }
 
+renvProject <- function() {
+  getOption("jetpack_venv")
+}
+
 packified <- function() {
-  file.exists(file.path(getOption("jetpack_venv"), "renv"))
+  file.exists(file.path(renvProject(), "renv"))
 }
 
 pkgVersion <- function(status, name) {
@@ -223,7 +118,7 @@ pkgRemove <- function(name) {
 }
 
 packratOn <- function() {
-  !is.na(Sys.getenv("R_PACKRAT_MODE", unset=NA))
+  FALSE #!is.na(Sys.getenv("R_PACKRAT_MODE", unset=NA))
 }
 
 prepCommand <- function() {
@@ -238,7 +133,7 @@ prepCommand <- function() {
 
   # copy files
   file.copy(file.path(dir, "DESCRIPTION"), file.path(venv_dir, "DESCRIPTION"), overwrite=TRUE)
-  file.copy(file.path(dir, "packrat.lock"), file.path(venv_dir, "packrat", "packrat.lock"), overwrite=TRUE)
+  file.copy(file.path(dir, "renv.lock"), file.path(venv_dir, "renv.lock"), overwrite=TRUE)
 
   if (!packratOn()) {
     if (interactive()) {
@@ -247,8 +142,6 @@ prepCommand <- function() {
       enablePackrat()
     }
   }
-
-  packrat::set_opts(use.cache=!isWindows())
 
   ensureRepos()
   checkInsecureRepos()
@@ -263,14 +156,7 @@ ensureRepos <- function() {
 }
 
 sandbox <- function(code) {
-  libs <- c("remotes", "desc", "docopt")
-
-  if (!interactive()) {
-    suppressMessages(packrat::extlib(libs))
-    invisible(eval(code))
-  } else {
-    invisible(silenceWarnings("so cannot be unloaded", packrat::with_extlib(libs, code)))
-  }
+  invisible(eval(code))
 }
 
 silenceWarnings <- function(msgs, code) {
@@ -291,9 +177,8 @@ silenceWarnings <- function(msgs, code) {
 }
 
 showStatus <- function(status) {
-  for (i in 1:nrow(status)) {
-    row <- status[i, ]
-    message(paste0("Using ", row$package, " ", row$packrat.version))
+  for (row in status$library$Packages) {
+    message(paste0("Using ", row$Package, " ", row$Version))
   }
 }
 
@@ -303,7 +188,16 @@ stopNotPackified <- function() {
 }
 
 success <- function(msg) {
-  cat(crayon::green(paste0(msg, "\n")))
+  cat(color(paste0(msg, "\n"), "green"))
+}
+
+color <- function(message, color) {
+  if (interactive() || isatty(stdout())) {
+    color_codes = list(red=31, green=32, yellow=33)
+    paste0("\033[", color_codes[color], "m", message, "\033[0m")
+  } else {
+    message
+  }
 }
 
 tempDir <- function() {
@@ -336,7 +230,7 @@ updateDesc <- function(packages, remotes) {
 }
 
 warn <- function(msg) {
-  cat(crayon::yellow(paste0(msg, "\n")))
+  cat(color(paste0(msg, "\n"), "yellow"))
 }
 
 venvDir <- function(dir) {
@@ -363,7 +257,7 @@ setupEnv <- function(dir=getwd(), init=FALSE) {
   ensureRepos()
 
   venv_dir <- venvDir(dir)
-  if (init && file.exists(venv_dir) && !file.exists("renv.lock")) {
+  if (init && file.exists(venv_dir) && !file.exists(file.path(dir, "renv.lock"))) {
     # remove previous virtual env
     unlink(venv_dir, recursive=TRUE)
   }
