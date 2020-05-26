@@ -19,11 +19,9 @@ load <- function() {
   # must source from virtualenv directory
   # for RStudio for work properly
   # this should probably be fixed in Packrat
-  tryCatch({
+  keepwd({
     setwd(venv_dir)
     quietly(source("renv/activate.R"))
-  }, finally={
-    setwd(wd)
   })
 
   invisible()

@@ -94,7 +94,7 @@ installHelper <- function(desc=NULL, show_status=FALSE, update=NULL, missing=NUL
     renv::update(packages=update, project=renvProject())
   }
 
-  renv::snapshot(project=renvProject())
+  renv::snapshot(project=renvProject(), prompt=FALSE)
 
   # copy back after successful
   jetpack_dir <- getOption("jetpack_dir")
@@ -163,7 +163,7 @@ prepCommand <- function() {
 
   if (!packratOn()) {
     if (interactive()) {
-      stop("Packrat must be on to run this. Run:\npackrat::on(); packrat::extlib(\"jetpack\")")
+      stop("renv must be loaded to run this. Restart your R session to continue.")
     } else {
       enablePackrat()
     }
@@ -286,6 +286,11 @@ quietly <- function(code) {
   utils::capture.output(suppressMessages(code))
 }
 
+keepwd <- function(code) {
+  wd <- getwd()
+  tryCatch(code, finally={ setwd(wd) })
+}
+
 setupEnv <- function(dir=getwd(), init=FALSE) {
   ensureRepos()
 
@@ -302,6 +307,7 @@ setupEnv <- function(dir=getwd(), init=FALSE) {
   options(renv.verbose=FALSE, renv.config.synchronized.check = FALSE, jetpack_venv=venv_dir)
 
   # initialize packrat
+  initialized <- FALSE
   if (!packified()) {
     if (file.exists(file.path(dir, "packrat.lock")) && !file.exists(file.path(dir, "renv.lock"))) {
       stopNotMigrated()
@@ -310,13 +316,25 @@ setupEnv <- function(dir=getwd(), init=FALSE) {
     message("Creating virtual environment...")
 
     file.copy(file.path(dir, "DESCRIPTION"), file.path(venv_dir, "DESCRIPTION"), overwrite=TRUE)
+
+    # restore wd after init changes it
     # TODO find way to suppress output from init
-    quietly(renv::init(project=venv_dir, bare=TRUE, restart=FALSE, settings=list(snapshot.type = "explicit")))
-    quietly(renv::snapshot())
+    keepwd(quietly(renv::init(project=venv_dir, bare=TRUE, restart=FALSE, settings=list(snapshot.type = "explicit"))))
+    quietly(renv::snapshot(prompt=FALSE))
+
+    initialized <- TRUE
   }
 
   if (!file.exists(file.path(dir, "renv.lock"))) {
-    file.copy(file.path(renv::project(), "renv.lock"), file.path(dir, "renv.lock"))
+    file.copy(file.path(renvProject(), "renv.lock"), file.path(dir, "renv.lock"))
+  }
+
+  # need to reload desc package
+  # TODO remove desc dependency
+  if (initialized && interactive()) {
+    renv::deactivate(project=renvProject())
+    library(desc)
+    enablePackrat()
   }
 
   venv_dir
