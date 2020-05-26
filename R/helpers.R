@@ -14,7 +14,9 @@ isTesting <- function() {
 }
 
 enablePackrat <- function() {
-  quietly(renv::activate(renvProject()))
+  # quiet output
+  options(renv.config.synchronized.check = FALSE)
+  renv::activate(renvProject())
 }
 
 findDir <- function(path) {
@@ -41,7 +43,7 @@ getName <- function(package) {
 
 getStatus <- function(project=NULL) {
   tryCatch({
-    suppressWarnings(packrat::status(project=project, quiet=TRUE))
+    suppressWarnings(renv::status(project=project))
   }, error=function(err) {
     msg <- conditionMessage(err)
     if (grepl("This project has not yet been packified", msg)) {
