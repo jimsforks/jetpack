@@ -53,7 +53,7 @@ getStatus <- function(project=NULL) {
   })
 }
 
-installHelper <- function(remove=c(), desc=NULL, show_status=FALSE, update_all=FALSE) {
+installHelper <- function(desc=NULL, show_status=FALSE, update=NULL, missing=NULL) {
   if (is.null(desc)) {
     desc <- getDesc()
   }
@@ -68,7 +68,15 @@ installHelper <- function(remove=c(), desc=NULL, show_status=FALSE, update_all=F
   lines <- trimws(readLines(temp_desc), "r")
   writeLines(lines, temp_desc)
 
-  renv::install(project=renvProject())
+  if (is.null(update)) {
+    renv::install(project=renvProject())
+  } else {
+    if (!is.null(missing)) {
+      renv::install(packages=missing, project=renvProject())
+    }
+    renv::update(update, project=renvProject())
+  }
+
   renv::snapshot(project=renvProject())
 
   # copy back after successful
