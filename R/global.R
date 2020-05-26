@@ -21,7 +21,8 @@ globalInstallHelper <- function(packages, remotes=c()) {
   updateDesc(packages, remotes, desc=desc)
   desc$write(file.path(dir, "DESCRIPTION"))
 
-  # TODO don't remove for add command
+  # TODO don't remove first
+  # currently needed to make sure right version installed
   for (package in packages) {
     if (package %in% rownames(utils::installed.packages())) {
       suppressMessages(utils::remove.packages(package))
