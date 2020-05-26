@@ -139,7 +139,7 @@ pkgRemove <- function(name) {
 }
 
 packratOn <- function() {
-  FALSE #!is.na(Sys.getenv("R_PACKRAT_MODE", unset=NA))
+  !is.na(Sys.getenv("RENV_PROJECT", unset=NA))
 }
 
 prepCommand <- function() {

@@ -2,6 +2,7 @@ prepGlobal <- function() {
   noPackrat()
   ensureRepos()
   checkInsecureRepos()
+  options(renv.verbose=FALSE)
 }
 
 globalAdd <- function(packages, remotes) {
@@ -59,7 +60,7 @@ globalList <- function() {
 }
 
 globalOutdatedPackages <- function() {
-  packages <- data.frame(utils::installed.packages())
+  packages <- as.data.frame(utils::installed.packages())
   packages <- packages[packages$Priority != "base" | is.na(packages$Priority),]
   packages <- rownames(packages)
   renv::update(packages=packages, check=TRUE, project=tempdir())
