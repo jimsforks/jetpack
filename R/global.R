@@ -61,34 +61,34 @@ globalRemove <- function(packages) {
 }
 
 globalUpdate <- function(packages, remotes, verbose) {
-  if (length(packages) == 0) {
+  update_all <- length(packages) == 0
+
+  if (update_all) {
     outdated <- globalOutdatedPackages()
-
-    if (nrow(outdated) > 0) {
-      for (i in 1:nrow(outdated)) {
-        row <- outdated[i, ]
-        package <- row$package
-        utils::install.packages(package, quiet=!verbose)
-        newVersion <- as.character(utils::packageVersion(package))
-        success(paste0("Updated ", package, " to ", newVersion, " (was ", row$installed, ")"))
-      }
+    # returns TRUE instead of empty list no outdated
+    if (isTRUE(outdated)) {
+      packages <- c()
     } else {
-      success("All packages are up-to-date!")
+      packages <- names(globalOutdatedPackages()$diff)
     }
-  } else {
-    versions <- list()
-    for (package in packages) {
-      package <- getName(package)
-      versions[package] <- as.character(utils::packageVersion(package))
-    }
+  }
 
-    globalInstallHelper(packages, remotes)
+  versions <- list()
+  for (package in packages) {
+    package <- getName(package)
+    versions[package] <- as.character(utils::packageVersion(package))
+  }
 
-    for (package in packages) {
-      package <- getName(package)
-      currentVersion <- versions[package]
-      newVersion <- as.character(utils::packageVersion(package))
-      success(paste0("Updated ", package, " to ", newVersion, " (was ", currentVersion, ")"))
-    }
+  globalInstallHelper(packages, remotes)
+
+  for (package in packages) {
+    package <- getName(package)
+    currentVersion <- versions[package]
+    newVersion <- as.character(utils::packageVersion(package))
+    success(paste0("Updated ", package, " to ", newVersion, " (was ", currentVersion, ")"))
+  }
+
+  if (length(packages) == 0) {
+    success("All packages are up-to-date!")
   }
 }

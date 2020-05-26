@@ -10,7 +10,12 @@ checkInsecureRepos <- function() {
 }
 
 showOutdated <- function(updates) {
-  outdated <- names(updates$diff)
+  # returns TRUE instead of empty list no outdated
+  if (isTRUE(updates)) {
+    outdated <- c()
+  } else {
+    outdated <- names(updates$diff)
+  }
 
   if (length(outdated) > 0) {
     for (package in outdated) {
