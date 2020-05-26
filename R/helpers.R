@@ -9,6 +9,18 @@ checkInsecureRepos <- function() {
   }
 }
 
+showOutdated <- function(updates) {
+  outdated <- names(updates$diff)
+
+  if (length(outdated) > 0) {
+    for (package in outdated) {
+      message(paste0(package, " (latest ", updates$new[[package]]$Version, ", installed ", updates$old[[package]]$Version, ")"))
+    }
+  } else {
+    success("All packages are up-to-date!")
+  }
+}
+
 isTesting <- function() {
   identical(Sys.getenv("TEST_JETPACK"), "true")
 }
