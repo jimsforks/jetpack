@@ -15,10 +15,9 @@ update <- function(packages=c(), remotes=c()) {
   sandbox({
     prepCommand()
 
-    update_all <- length(packages) == 0
-
     status <- getStatus()
 
+    update_all <- length(packages) == 0
     if (update_all) {
       packages <- names(status$lockfile$Package)
     }
@@ -44,15 +43,21 @@ update <- function(packages=c(), remotes=c()) {
       packages <- names(status$lockfile$Package)
     }
 
+    updated <- FALSE
     for (package in packages) {
       package <- getName(package)
       currentVersion <- versions[package]
       newVersion <- pkgVersion(status, package)
       if (is.null(currentVersion)) {
         success(paste0("Installed ", package, " ", newVersion))
-      } else {
+        updated <- TRUE
+      } else if (!update_all || currentVersion != newVersion) {
         success(paste0("Updated ", package, " to ", newVersion, " (was ", currentVersion, ")"))
+        updated <- TRUE
       }
+    }
+    if (update_all && !updated) {
+      success("All packages are up-to-date!")
     }
   })
 }
