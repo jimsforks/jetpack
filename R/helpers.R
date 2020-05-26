@@ -14,9 +14,8 @@ isTesting <- function() {
 }
 
 enablePackrat <- function() {
-  # quiet output
-  options(renv.config.synchronized.check = FALSE)
-  renv::activate(renvProject())
+  # use load (activate updates profile then calls load)
+  renv::load(renvProject(), quiet=TRUE)
 }
 
 findDir <- function(path) {
@@ -267,7 +266,8 @@ setupEnv <- function(dir=getwd(), init=FALSE) {
     dir.create(venv_dir, recursive=TRUE)
   }
 
-  options(renv.verbose=FALSE, jetpack_venv=venv_dir)
+  # quiet output
+  options(renv.verbose=FALSE, renv.config.synchronized.check = FALSE, jetpack_venv=venv_dir)
 
   # initialize packrat
   if (!packified()) {
