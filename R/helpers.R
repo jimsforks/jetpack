@@ -292,6 +292,11 @@ keepwd <- function(code) {
   tryCatch(code, finally={ setwd(wd) })
 }
 
+loadExternal <- function(package) {
+  lib_paths <- getOption("jetpack_lib")
+  loadNamespace(package, lib.loc=lib_paths)
+}
+
 setupEnv <- function(dir=getwd(), init=FALSE) {
   ensureRepos()
 
@@ -303,6 +308,8 @@ setupEnv <- function(dir=getwd(), init=FALSE) {
   if (!file.exists(venv_dir)) {
     dir.create(venv_dir, recursive=TRUE)
   }
+
+  options(jetpack_lib=.libPaths())
 
   # quiet output
   options(renv.verbose=FALSE, renv.config.synchronized.check = FALSE, jetpack_venv=venv_dir)
@@ -317,8 +324,6 @@ setupEnv <- function(dir=getwd(), init=FALSE) {
 
     file.copy(file.path(dir, "DESCRIPTION"), file.path(venv_dir, "DESCRIPTION"), overwrite=TRUE)
 
-    lib_paths = .libPaths()
-
     # restore wd after init changes it
     # TODO find way to suppress output from init
     keepwd(quietly(renv::init(project=venv_dir, bare=TRUE, restart=FALSE, settings=list(snapshot.type = "explicit"))))
@@ -327,13 +332,13 @@ setupEnv <- function(dir=getwd(), init=FALSE) {
     # reload desc
     # TODO remove this dependency
     if (interactive()) {
-      loadNamespace("desc", lib.loc=lib_paths)
+      loadExternal("desc")
     }
   }
 
-  if (!file.exists(file.path(dir, "renv.lock"))) {
-    file.copy(file.path(renvProject(), "renv.lock"), file.path(dir, "renv.lock"))
-  }
+  # if (!file.exists(file.path(dir, "renv.lock"))) {
+  #   file.copy(file.path(renvProject(), "renv.lock"), file.path(dir, "renv.lock"))
+  # }
 
   venv_dir
 }
