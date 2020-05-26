@@ -46,7 +46,7 @@ update <- function(packages=c(), remotes=c()) {
     updated <- FALSE
     for (package in packages) {
       package <- getName(package)
-      currentVersion <- versions[package]
+      currentVersion <- versions[[package]]
       newVersion <- pkgVersion(status, package)
       if (is.null(currentVersion)) {
         success(paste0("Installed ", package, " ", newVersion))
