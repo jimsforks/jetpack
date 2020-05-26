@@ -11,8 +11,8 @@ load <- function() {
   }
 
   # TODO remove these
-  library(desc)
-  library(docopt)
+  loadNamespace("desc")
+  loadNamespace("docopt")
 
   tryCatch({
     venv_dir <- setupEnv(dir)
