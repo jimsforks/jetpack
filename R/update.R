@@ -29,8 +29,8 @@ update <- function(packages=c(), remotes=c()) {
     }
 
     if (update_all) {
-      dependencies <- names(renv::dependencies()$Package)
-      missing <- intersect(dependencies, packages)
+      dependencies <- renv::dependencies()$Package
+      missing <- setdiff(dependencies, packages)
       desc <- updateDesc(c(), remotes)
       installHelper(update=dependencies, missing=missing, desc=desc)
     } else {
