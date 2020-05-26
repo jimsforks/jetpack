@@ -74,7 +74,7 @@ installHelper <- function(desc=NULL, show_status=FALSE, update=NULL, missing=NUL
     if (!is.null(missing)) {
       renv::install(packages=missing, project=renvProject())
     }
-    renv::update(update, project=renvProject())
+    renv::update(packages=update, project=renvProject())
   }
 
   renv::snapshot(project=renvProject())
@@ -196,6 +196,11 @@ stopNotPackified <- function() {
   stop(paste0("This project has not yet been packified.\nRun '", cmd, "' to init."))
 }
 
+stopNotMigrated <- function() {
+  cmd <- if (!interactive()) "jetpack migrate" else "jetpack::migrate()"
+  stop(paste0("This project has not yet been migrated to renv.\nRun '", cmd, "' to migrate."))
+}
+
 success <- function(msg) {
   cat(color(paste0(msg, "\n"), "green"))
 }
@@ -253,7 +258,7 @@ venvDir <- function(dir) {
   }
 
   # TODO better algorithm, but keep dependency free
-  dir_hash <- sum(utf8ToInt(dir))
+  dir_hash <- sum(utf8ToInt(dir)) + 1
   venv_name <- paste0(basename(dir), "-", dir_hash)
   file.path(venv_dir, venv_name)
 }
@@ -279,6 +284,10 @@ setupEnv <- function(dir=getwd(), init=FALSE) {
 
   # initialize packrat
   if (!packified()) {
+    if (file.exists(file.path(dir, "packrat.lock")) && !file.exists(file.path(dir, "renv.lock"))) {
+      stopNotMigrated()
+    }
+
     message("Creating virtual environment...")
 
     file.copy(file.path(dir, "DESCRIPTION"), file.path(venv_dir, "DESCRIPTION"), overwrite=TRUE)
