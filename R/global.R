@@ -15,39 +15,20 @@ globalAdd <- function(packages, remotes) {
 }
 
 globalInstallHelper <- function(packages, remotes=c()) {
-  unversioned <- c()
+  # create temporary directory, write description, install deps
+  dir <- tempDir()
+  desc <- desc::desc("!new")
+  updateDesc(packages, remotes, desc=desc)
+  desc$write(file.path(dir, "DESCRIPTION"))
+
+  # TODO don't remove for add command
   for (package in packages) {
-    parts <- strsplit(package, "@")[[1]]
-    if (length(parts) != 1) {
-      package <- parts[1]
-      version <- parts[2]
-      remotes::install_version(package, version=version, reload=FALSE)
-    } else {
-      unversioned <- c(unversioned, package)
+    if (package %in% rownames(utils::installed.packages())) {
+      suppressMessages(utils::remove.packages(package))
     }
   }
 
-  if (length(unversioned) > 0) {
-    # create temporary directory, write description, install deps
-    dir <- tempDir()
-    desc <- desc::desc("!new")
-    for (remote in remotes) {
-      desc$add_remotes(remote)
-    }
-    for (package in unversioned) {
-      desc$set_dep(package, "Imports")
-    }
-    desc$write(file.path(dir, "DESCRIPTION"))
-
-    # TODO don't remove for add command
-    for (package in unversioned) {
-      if (package %in% rownames(utils::installed.packages())) {
-        suppressMessages(utils::remove.packages(package))
-      }
-    }
-
-    remotes::install_deps(dir, reload=FALSE)
-  }
+  renv::install(packages=packages, project=dir)
 }
 
 globalList <- function() {

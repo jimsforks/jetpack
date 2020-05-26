@@ -232,8 +232,10 @@ tempDir <- function() {
   dir
 }
 
-updateDesc <- function(packages, remotes) {
-  desc <- getDesc()
+updateDesc <- function(packages, remotes, desc=NULL) {
+  if (is.null(desc)) {
+    desc <- getDesc()
+  }
 
   for (remote in remotes) {
     desc$add_remotes(remote)
