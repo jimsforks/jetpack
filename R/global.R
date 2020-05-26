@@ -63,7 +63,7 @@ globalOutdatedPackages <- function() {
   packages <- as.data.frame(utils::installed.packages())
   packages <- packages[packages$Priority != "base" | is.na(packages$Priority),]
   packages <- rownames(packages)
-  renv::update(packages=packages, check=TRUE, project=tempdir())
+  renv::update(packages=packages, check=TRUE, project=tempDir())
 }
 
 globalOutdated <- function() {

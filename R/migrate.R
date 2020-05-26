@@ -14,8 +14,7 @@ migrate <- function() {
       stop("renv.lock already exists.")
     }
 
-    temp_dir <- tempfile()
-    dir.create(temp_dir)
+    temp_dir <- tempDir()
     packrat_dir <- file.path(temp_dir, "packrat")
     dir.create(packrat_dir)
     file.copy(file.path(dir, "packrat.lock"), file.path(packrat_dir, "packrat.lock"))
