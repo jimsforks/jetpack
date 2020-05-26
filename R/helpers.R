@@ -105,11 +105,11 @@ packified <- function() {
 }
 
 pkgVersion <- function(status, name) {
-  row <- status[status$package == name, ]
-  if (nrow(row) == 0) {
+  row <- status$lockfile$Package[[name]]
+  if (is.null(row)) {
     stop(paste0("Cannot find package '", name, "' in DESCRIPTION file"))
   }
-  row$packrat.version
+  row$Version
 }
 
 pkgRemove <- function(name) {
