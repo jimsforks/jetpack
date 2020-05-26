@@ -12,6 +12,6 @@ outdated <- function() {
     # update appears to return packages outside project if no packages passed
     packages <- names(getStatus()$lockfile$Package)
     updates <- renv::update(packages=packages, project=renvProject(), check=TRUE)
-    showOutdated(packages)
+    showOutdated(updates)
   })
 }
