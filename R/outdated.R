@@ -9,17 +9,14 @@ outdated <- function() {
   sandbox({
     prepCommand()
 
-    status <- getStatus()
-    packages <- status[status$currently.used, ]$package
+    # update appears to return packages outside project if no packages passed
+    packages <- names(getStatus()$lockfile$Package)
+    updates <- renv::update(packages=packages, project=renvProject(), check=TRUE)
+    outdated <- names(updates$diff)
 
-    deps <- remotes::package_deps(packages)
-    # TODO decide what to do about uninstalled packages
-    outdated <- deps[deps$diff == -1, ]
-
-    if (nrow(outdated) > 0) {
-      for (i in 1:nrow(outdated)) {
-        row <- outdated[i, ]
-        message(paste0(row$package, " (latest ", row$available, ", installed ", row$installed, ")"))
+    if (length(outdated) > 0) {
+      for (package in outdated) {
+        message(paste0(package, " (latest ", updates$new[[package]]$Version, ", installed ", updates$old[[package]]$Version, ")"))
       }
     } else {
       success("All packages are up-to-date!")
