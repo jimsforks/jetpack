@@ -322,7 +322,7 @@ setupEnv <- function(dir=getwd(), init=FALSE) {
     # restore wd after init changes it
     # TODO find way to suppress output from init
     keepwd(quietly(renv::init(project=venv_dir, bare=TRUE, restart=FALSE, settings=list(snapshot.type = "explicit"))))
-    quietly(renv::snapshot(prompt=FALSE))
+    quietly(renv::snapshot(prompt=FALSE, force=TRUE))
 
     # reload desc
     # TODO remove this dependency

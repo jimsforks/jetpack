@@ -14,14 +14,28 @@ load <- function() {
   library(desc)
   library(docopt)
 
-  venv_dir <- setupEnv(dir)
+  tryCatch({
+    venv_dir <- setupEnv(dir)
 
-  # must source from virtualenv directory
-  # for RStudio for work properly
-  # this should probably be fixed in Packrat
-  keepwd({
-    setwd(venv_dir)
-    quietly(source("renv/activate.R"))
+    # must source from virtualenv directory
+    # for RStudio for work properly
+    # this should probably be fixed in Packrat
+    keepwd({
+      setwd(venv_dir)
+      quietly(source("renv/activate.R"))
+    })
+  }, error = function(e) {
+    msg <- geterrmessage()
+    args <- commandArgs(trailingOnly=TRUE)
+    migrating <- !interactive() && identical(args, "migrate")
+    if (!migrating) {
+      if (interactive()) {
+        stop(e)
+      } else {
+        message(conditionMessage(e))
+        quit()
+      }
+    }
   })
 
   invisible()
